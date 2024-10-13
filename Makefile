@@ -10,8 +10,8 @@ all: src/main.c src/login.c
 install: all
 	install -dZ ${DESTDIR}/etc/$(NAME)
 	install -DZ $(NAME) -t ${DESTDIR}/usr/bin
-	install -DZ $(RESD)/xsetup.sh -t ${DESTDIR}/etc/$(NAME)
-	install -DZ $(RESD)/nomdm.service -t ${DESTDIR}/usr/lib/systemd/system
+	install -DZ res/xsetup.sh -t ${DESTDIR}/etc/$(NAME)
+	install -DZ res/nomdm.service -t ${DESTDIR}/usr/lib/systemd/system
 
 uninstall:
 	rm -rf ${DESTDIR}/etc/$(NAME)
