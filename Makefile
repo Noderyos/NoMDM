@@ -7,7 +7,7 @@ CMD = ./$(NAME)
 all: src/main.c src/login.c
 	$(CC) $(CFLAGS) -o $(NAME) $? $(LDFLAGS)
 
-install: $(NAME)
+install: all
 	install -dZ ${DESTDIR}/etc/$(NAME)
 	install -DZ $(NAME) -t ${DESTDIR}/usr/bin
 	install -DZ $(RESD)/xsetup.sh -t ${DESTDIR}/etc/$(NAME)
