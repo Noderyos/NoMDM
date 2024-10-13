@@ -70,7 +70,6 @@ int main(){
 	snprintf(vt, 15, "vt%d", TTY);
 	snprintf(display, 15, ":%d", display_id);
 
-	setenv("DISPLAY", display, 1);
 	xorg(display, vt, pw, "/usr/bin/i3");
 	return 0;
 }

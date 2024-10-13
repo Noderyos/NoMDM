@@ -18,8 +18,7 @@ int login_conv(
     struct pam_response **resp,
     void *str)
 {
-    struct pam_response *response = malloc(
-        sizeof(struct pam_response) * num);
+    struct pam_response *response = malloc(sizeof(struct pam_response) * num);
 
     for (int i = 0; i < num; ++i) {
         response[i].resp_retcode = 0;
@@ -48,7 +47,7 @@ void xauth(const char* display_name, const char* shell, const char* home){
 
     if (pid == 0){
         char cmd[1024];
-        snprintf(cmd, 1023, "%s add %s . `%s`", "/usr/bin/xauth", display_name, "/usr/bin/mcookie");
+        snprintf(cmd, 1023, "/usr/bin/xauth add %s . `/usr/bin/mcookie`", display_name);
         execl(shell, shell, "-c", cmd, NULL);
         exit(EXIT_SUCCESS);
     }
