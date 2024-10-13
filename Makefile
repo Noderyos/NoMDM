@@ -1,45 +1,22 @@
 NAME = nomdm
 CC = gcc
-CFLAGS = -Wall -Wextra -Werror=vla -Werror
+CFLAGS = -Wall -Wextra -Werror=vla -Werror -Iinclude
 LDFLAGS = -lxcb -lpam
 CMD = ./$(NAME)
 
-BIND = bin
-OBJD = obj
-SRCD = src
-RESD = res
+all: src/main.c src/login.c
+	$(CC) $(CFLAGS) -o $(NAME) $? $(LDFLAGS)
 
-INCL = -I$(SRCD)
-
-SRCS = $(SRCD)/main.c
-
-SRCS_OBJS:= $(patsubst %.c,$(OBJD)/%.o,$(SRCS))
-
-all: $(BIND)/$(NAME)
-
-$(OBJD)/%.o: %.c
-	@echo "CC $@"
-	@mkdir -p $(@D)
-	@$(CC) $(INCL) $(CFLAGS) -c -o $@ $<
-
-$(BIND)/$(NAME): $(SRCS_OBJS)
-	@echo "LD $@"
-	@mkdir -p $(@D)
-	@$(CC) -o $@ $^ $(LDFLAGS)
-
-run:
-	@cd $(BIND) && $(CMD)
-
-install: $(BIND)/$(NAME)
-	install -dZ ${DESTDIR}/etc/nomdm
-	install -DZ $(BIND)/$(NAME) -t ${DESTDIR}/usr/bin
-	install -DZ $(RESD)/xsetup.sh -t ${DESTDIR}/etc/nomdm
+install: $(NAME)
+	install -dZ ${DESTDIR}/etc/$(NAME)
+	install -DZ $(NAME) -t ${DESTDIR}/usr/bin
+	install -DZ $(RESD)/xsetup.sh -t ${DESTDIR}/etc/$(NAME)
 	install -DZ $(RESD)/nomdm.service -t ${DESTDIR}/usr/lib/systemd/system
 
 uninstall:
-	rm -rf ${DESTDIR}/etc/nomdm
-	rm -f ${DESTDIR}/usr/bin/nomdm
+	rm -rf ${DESTDIR}/etc/$(NAME)
+	rm -f ${DESTDIR}/usr/bin/$(NAME)
 	rm -f ${DESTDIR}/usr/lib/systemd/system/nomdm.service
 
 clean:
-	rm -rf $(BIND) $(OBJD)
+	rm -rf $(NAME)
