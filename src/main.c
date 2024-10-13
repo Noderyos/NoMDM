@@ -2,9 +2,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 #include <linux/vt.h>
 #include <sys/ioctl.h>
 #include <sys/wait.h>
+#include <security/pam_appl.h>
+#include <sys/types.h>
+#include <pwd.h>
+#include <grp.h>
 
 #include <xcb/xcb.h>
 
@@ -44,8 +49,8 @@ void xauth(const char* display_name, const char* shell, const char* home){
 }
 
 
-void xorg(const char* display, const char* vt, const char* desktop_cmd){
-	xauth(display, "/bin/bash", "/root");
+void xorg(const char* display, const char* vt, struct passwd *pw, const char* desktop_cmd){
+	xauth(display, pw->pw_shell, pw->pw_dir);
 
 	pid_t pid = fork();
 
@@ -72,6 +77,22 @@ void xorg(const char* display, const char* vt, const char* desktop_cmd){
 	pid_t xorg_pid = fork();
 
 	if (xorg_pid == 0){
+		if (initgroups(pw->pw_name, pw->pw_gid) != 0) {
+			perror("initgroups error");
+			return;
+		}
+
+		if (setgid(pw->pw_gid) != 0) {
+			perror("setgid error");
+			return;
+		}
+
+		if (setuid(pw->pw_uid) != 0) {
+			perror("setuid error");
+			return;
+		}
+
+		printf("Starting %s...\n", desktop_cmd);
 		char de_cmd[1024];
 		snprintf(de_cmd, 1023, "%s %s", "/etc/nomdm/xsetup.sh", desktop_cmd);
 		execl("/bin/bash", "/bin/bash", "-c", de_cmd, NULL);
@@ -103,8 +124,74 @@ void switch_tty(int number){
 	fclose(console);
 }
 
+int login_conv(
+	int num,
+	const struct pam_message **msg,
+	struct pam_response **resp,
+	void *str)
+{
+	struct pam_response *response = malloc(
+		sizeof(struct pam_response) * num);
+
+	for (int i = 0; i < num; ++i) {
+		response[i].resp_retcode = 0;
+		if (msg[i]->msg_style == PAM_PROMPT_ECHO_OFF
+			|| msg[i]->msg_style == PAM_PROMPT_ECHO_ON) {
+			response[i].resp = strdup(str);
+			} else {
+				response[i].resp = NULL;
+			}
+	}
+	*resp = response;
+	return PAM_SUCCESS;
+}
+
 int main(){
 	switch_tty(TTY);
+
+	char username[64];
+    char password[64];
+
+    printf("Username: ");
+    scanf("%63s", username);
+    printf("Password: ");
+    scanf("%63s", password);
+
+    pam_handle_t *pam_handle;
+    struct pam_conv pam_conv = {login_conv, (void *)password};
+
+    int result = pam_start("login", username, &pam_conv, &pam_handle);
+
+    if (result != PAM_SUCCESS) {
+        fprintf(stderr, "ERROR: PAM init: %s\n", pam_strerror(pam_handle, result));
+        return 1;
+    }
+
+    result = pam_authenticate(pam_handle, 0);
+    if (result != PAM_SUCCESS) {
+        fprintf(stderr, "ERROR: Authentication failed: %s\n",
+            pam_strerror(pam_handle, result));
+        pam_end(pam_handle, result);
+        return 1;
+    }
+
+    result = pam_acct_mgmt(pam_handle, 0);
+    if (result != PAM_SUCCESS) {
+        fprintf(stderr, "ERROR: Access management: %s\n", pam_strerror(pam_handle, result));
+        pam_end(pam_handle, result);
+        return 1;
+    }
+
+    printf("Auth succeeded!\n");
+
+    struct passwd *pw = getpwnam(username);;
+    if (pw == NULL) {
+         fprintf(stderr, "ERROR: Cannot retrieve user data\n");
+         pam_end(pam_handle, result);
+         return 1;
+    }
+
+    pam_end(pam_handle, result);
 
 	int display_id = get_free_display();
 	if(display_id == 1) {
@@ -117,6 +204,6 @@ int main(){
 	snprintf(display, 15, ":%d", display_id);
 
 	setenv("DISPLAY", display, 1);
-	xorg(display, vt, "/usr/bin/i3");
+	xorg(display, vt, pw, "/usr/bin/i3");
 	return 0;
 }

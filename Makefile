@@ -1,7 +1,7 @@
 NAME = nomdm
 CC = gcc
 CFLAGS = -Wall -Wextra -Werror=vla -Werror
-LDFLAGS = -lxcb
+LDFLAGS = -lxcb -lpam
 CMD = ./$(NAME)
 
 BIND = bin
